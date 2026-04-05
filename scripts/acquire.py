@@ -196,8 +196,8 @@ def main() -> None:
     args = parser.parse_args()
 
     load_dotenv(ENV_FILE)
-    client_id = (os.getenv("CLIENT_ID") or "").strip()
-    client_secret = (os.getenv("CLIENT_SECRET") or "").strip()
+    client_id = os.getenv("CLIENT_ID")
+    client_secret = os.getenv("CLIENT_SECRET")
     if not client_id or not client_secret:
         print(
             "Error: CLIENT_ID and CLIENT_SECRET must be set (e.g. env/.env locally, or "
