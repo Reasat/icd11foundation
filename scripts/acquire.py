@@ -56,7 +56,14 @@ def _get_token(client_id: str, client_secret: str) -> str:
         "grant_type": "client_credentials",
     }
     r = requests.post(TOKEN_ENDPOINT, data=payload, verify=False, timeout=30)
-    r.raise_for_status()
+    if not r.ok:
+        detail = (r.text or "").strip()[:2000] or "(empty body)"
+        raise RuntimeError(
+            f"WHO token endpoint returned HTTP {r.status_code}: {detail}\n"
+            "Verify CLIENT_ID and CLIENT_SECRET match the WHO ICD API client at "
+            "https://icd.who.int/icdapi (no extra spaces or quotes; repository secrets "
+            "must be named CLIENT_ID and CLIENT_SECRET)."
+        )
     return r.json()["access_token"]
 
 
@@ -189,10 +196,14 @@ def main() -> None:
     args = parser.parse_args()
 
     load_dotenv(ENV_FILE)
-    client_id = os.getenv("CLIENT_ID")
-    client_secret = os.getenv("CLIENT_SECRET")
+    client_id = (os.getenv("CLIENT_ID") or "").strip()
+    client_secret = (os.getenv("CLIENT_SECRET") or "").strip()
     if not client_id or not client_secret:
-        print(f"Error: CLIENT_ID and CLIENT_SECRET must be set in {ENV_FILE}", file=sys.stderr)
+        print(
+            "Error: CLIENT_ID and CLIENT_SECRET must be set (e.g. env/.env locally, or "
+            "GitHub Actions repository secrets CLIENT_ID / CLIENT_SECRET).",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     use_cache = not args.no_cache
