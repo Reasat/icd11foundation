@@ -38,4 +38,4 @@ just iterate       # extract → validate (skip acquire)
 
 ## CI secrets
 
-GitHub Actions expects repository secrets `ICD_CLIENT_ID` and `ICD_CLIENT_SECRET` (same values as `CLIENT_ID` / `CLIENT_SECRET` locally).
+GitHub Actions expects repository secrets `CLIENT_ID` and `CLIENT_SECRET` (same as `env/.env`).
