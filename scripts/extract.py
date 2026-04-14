@@ -15,11 +15,20 @@ Field mappings from ICD-11 Foundation API response:
     inclusion[].label.@value        → narrow_synonyms
     exclusion[].label.@value        → related_synonyms
     parent[]                        → parents (http → https; URI → CURIE)
-    (is_root: True when no parents in entity set)
+
+`is_root` is not written to YAML (internal-only in other pipelines; omitted here).
+
+**Phase 4.6 (`skos_exact_match`):** WHO Foundation entity JSON (API v2) does not expose
+`oboInOwl:hasDbXref` or other ontology cross-reference codes on entities. Enumerated keys
+across the full acquired graph are limited to structural/linguistic fields (`title`,
+`definition`, `synonym`, `parent`, `child`, `browserUrl`, chapter-related `relatedEntities*`,
+`relatedImpairment`, etc.). External mappings (e.g. ICD-10) are not present on this
+endpoint, so **`skos_exact_match` is not populated** — the slot exists in the shared schema
+for linkml-owl compatibility only.
 
 Usage:
     python scripts/extract.py --input tmp/icd11foundation_raw.json \\
-                              --output icd11foundation.linkml.yml
+                              --output icd11foundation.linkml.yaml
 """
 
 from __future__ import annotations
@@ -31,7 +40,7 @@ from pathlib import Path
 
 import yaml
 
-from icd11foundation.datamodel import OntologyDocument, OntologyTerm
+from icd11foundation.datamodel import OntologyDocument, OntologyTerm, Synonym
 
 # ── CURIE helpers ──────────────────────────────────────────────────────────────
 
@@ -50,6 +59,22 @@ def _to_https(uri: str) -> str:
 def _uri_to_curie(uri: str) -> str:
     eid = _entity_id(uri)
     return f"{CURIE_PREFIX}:{eid}"
+
+
+# ── YAML: quote strings that break plain YAML scalars ───────────────────────────
+
+
+class QuotingDumper(yaml.SafeDumper):
+    pass
+
+
+def _represent_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
+    if any(c in data for c in ",:{}") or data.strip() != data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+
+QuotingDumper.add_representer(str, _represent_str)
 
 
 # ── Field extraction helpers ───────────────────────────────────────────────────
@@ -83,13 +108,13 @@ def _label_list(items: list | None) -> list[str]:
     return out
 
 
-def _dedup(lst: list[str]) -> list[str]:
+def _dedup_synonym_strings(strings: list[str]) -> list[Synonym]:
     seen: set[str] = set()
-    out: list[str] = []
-    for v in lst:
+    out: list[Synonym] = []
+    for v in strings:
         if v not in seen:
             seen.add(v)
-            out.append(v)
+            out.append(Synonym(synonym_text=v))
     return out
 
 
@@ -106,14 +131,14 @@ def _node_to_term(uri: str, data: dict, valid_uris: set[str]) -> OntologyTerm | 
 
     definition = _lang_value(data.get("definition"))
 
-    exact_synonyms: list[str] = []
+    exact_strings: list[str] = []
     fsn = _lang_value(data.get("fullySpecifiedName"))
     if fsn and fsn != label:
-        exact_synonyms.append(fsn)
-    exact_synonyms.extend(_label_list(data.get("synonym")))
+        exact_strings.append(fsn)
+    exact_strings.extend(_label_list(data.get("synonym")))
 
-    narrow_synonyms = _label_list(data.get("narrowerTerm")) + _label_list(data.get("inclusion"))
-    related_synonyms = _label_list(data.get("exclusion"))
+    narrow_strings = _label_list(data.get("narrowerTerm")) + _label_list(data.get("inclusion"))
+    related_strings = _label_list(data.get("exclusion"))
 
     parents: list[str] = []
     for p in data.get("parent", []):
@@ -125,11 +150,10 @@ def _node_to_term(uri: str, data: dict, valid_uris: set[str]) -> OntologyTerm | 
         id=curie,
         label=label,
         definition=definition,
-        exact_synonyms=_dedup(exact_synonyms) or None,
-        narrow_synonyms=_dedup(narrow_synonyms) or None,
-        related_synonyms=_dedup(related_synonyms) or None,
+        exact_synonyms=_dedup_synonym_strings(exact_strings) or None,
+        narrow_synonyms=_dedup_synonym_strings(narrow_strings) or None,
+        related_synonyms=_dedup_synonym_strings(related_strings) or None,
         parents=parents or None,
-        is_root=True if not parents else False,
     )
 
 
@@ -179,12 +203,13 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     payload = doc.model_dump(exclude_none=True)
     with open(args.output, "w", encoding="utf-8") as f:
-        yaml.safe_dump(
+        yaml.dump(
             payload,
             f,
             allow_unicode=True,
             sort_keys=False,
             default_flow_style=False,
+            Dumper=QuotingDumper,
         )
 
     print(f"Written: {args.output} ({len(terms)} terms)", file=sys.stderr)

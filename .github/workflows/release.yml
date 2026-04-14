@@ -1,3 +1,4 @@
+# Releases: workflow_dispatch only (no cron / push auto-release) — see docs/plan.md § Phase 8.
 name: Release
 
 on:
@@ -44,19 +45,19 @@ jobs:
           uv run python scripts/acquire.py --output tmp/icd11foundation_raw.json
 
       - name: Extract
-        run: uv run python scripts/extract.py --input tmp/icd11foundation_raw.json --output icd11foundation.linkml.yml
+        run: uv run python scripts/extract.py --input tmp/icd11foundation_raw.json --output icd11foundation.linkml.yaml
 
       - name: Validate
         run: |
           uv run python -m linkml.validator.cli \
             -s linkml/mondo_source_schema.yaml \
             -C OntologyDocument \
-            icd11foundation.linkml.yml
+            icd11foundation.linkml.yaml
 
       - name: Verify
         run: |
           uv run python scripts/verify.py \
-            --yaml icd11foundation.linkml.yml \
+            --yaml icd11foundation.linkml.yaml \
             --raw-json tmp/icd11foundation_raw.json
 
       - name: Derive OWL
@@ -65,15 +66,15 @@ jobs:
             -s linkml/mondo_source_schema.yaml \
             -f yaml \
             -o icd11foundation.linkml.owl \
-            icd11foundation.linkml.yml || echo "::warning::data2owl failed — see docs/report.md"
+            icd11foundation.linkml.yaml || echo "::warning::data2owl failed — see docs/pipeline_incidents.md"
 
       - name: Create GitHub Release
-        if: success() && hashFiles('icd11foundation.linkml.yml') != ''
+        if: success() && hashFiles('icd11foundation.linkml.yaml') != ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           files: |
-            icd11foundation.linkml.yml
+            icd11foundation.linkml.yaml
             icd11foundation.linkml.owl
           generate_release_notes: true
         env:

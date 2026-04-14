@@ -37,7 +37,7 @@ That script shows the failure with **one** `funowl.Literal('"quoted leading')` a
 same path through `linkml-owl` on a one-term YAML. Full ICD-11 runs can fail for this
 and other literal edge cases once the dataset is large enough.
 
-**Resolution:** If `data2owl` fails, the released artifact is `icd11foundation.linkml.yml`
+**Resolution:** If `data2owl` fails, the released artifact is `icd11foundation.linkml.yaml`
 only. The OWL step is non-fatal in CI (`|| echo "::warning::"` fallback). Downstream
 Mondo ingest reads the YAML directly.
 

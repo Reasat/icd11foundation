@@ -5,7 +5,7 @@ env/.env
 # Build artefacts — uploaded as GitHub Release assets
 icd11foundation.owl
 icd11foundation_from_linkml.owl
-icd11foundation.linkml.yml
+icd11foundation.linkml.yaml
 icd11foundation.linkml.owl
 
 # Build intermediates

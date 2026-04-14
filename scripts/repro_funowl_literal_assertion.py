@@ -44,7 +44,7 @@ terms:
   definition: '"quoted leading'
 """
     with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".yml", delete=False, encoding="utf-8"
+        mode="w", suffix=".yaml", delete=False, encoding="utf-8"
     ) as f:
         f.write(yml)
         tmp = Path(f.name)

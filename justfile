@@ -2,19 +2,19 @@
 #
 # Pipeline:
 #   just acquire    — BFS-traverse WHO ICD-11 Foundation API → tmp/icd11foundation_raw.json
-#   just extract    — JSON cache → icd11foundation.linkml.yml
+#   just extract    — JSON cache → icd11foundation.linkml.yaml
 #   just validate   — linkml-validate
 #   just verify     — scripts/verify.py (YAML structure, parents, optional raw-json cross-check)
 #   just check      — validate + verify (recommended before release)
-#   just data2owl   — icd11foundation.linkml.yml → icd11foundation.linkml.owl
-#   just build      — full pipeline: acquire → extract → validate → data2owl
+#   just data2owl   — icd11foundation.linkml.yaml → icd11foundation.linkml.owl
+#   just build      — full pipeline: acquire → extract → validate → verify → data2owl (Phase 9 before OWL)
 #   just iterate    — extract → validate (tight feedback, skips acquire)
 #
 # Auth: set CLIENT_ID and CLIENT_SECRET in env/.env (see env/.env.example).
 
 schema   := "linkml/mondo_source_schema.yaml"
 raw_json := "tmp/icd11foundation_raw.json"
-yaml_out := "icd11foundation.linkml.yml"
+yaml_out := "icd11foundation.linkml.yaml"
 owl_out  := "icd11foundation.linkml.owl"
 
 acquire:
@@ -35,7 +35,7 @@ data2owl:
     uv run python -m linkml_owl.dumpers.owl_dumper \
         --schema {{schema}} -f yaml -o {{owl_out}} {{yaml_out}}
 
-build: acquire extract validate data2owl
+build: acquire extract validate verify data2owl
 
 iterate: extract validate
 

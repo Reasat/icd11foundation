@@ -12,7 +12,7 @@ Preprocessed ICD-11 Foundation (WHO ICD API) for Mondo source ingest — LinkML 
 
 ```bash
 just acquire       # BFS over Foundation API (~hours first run; cached under tmp/cache/)
-just extract       # tmp/icd11foundation_raw.json → icd11foundation.linkml.yml
+just extract       # tmp/icd11foundation_raw.json → icd11foundation.linkml.yaml
 just validate      # linkml-validate
 just verify        # scripts/verify.py — structure, parents, raw-json cross-check
 just check         # validate + verify (recommended before release)
@@ -25,16 +25,17 @@ just iterate       # extract → validate (skip acquire)
 
 | File | Description |
 |------|-------------|
-| `icd11foundation.linkml.yml` | Primary artefact for Mondo ingest |
+| `icd11foundation.linkml.yaml` | Primary artefact for Mondo ingest |
 | `icd11foundation.linkml.owl` | linkml-owl–derived OWL (when `data2owl` succeeds) |
 
 ## Docs
 
 | Doc | Contents |
 |-----|----------|
-| [`docs/plan.md`](docs/plan.md) | Pipeline, field mappings, ID scheme |
-| [`docs/release_notes.md`](docs/release_notes.md) | Stats and verification results |
-| [`docs/report.md`](docs/report.md) | Deviations and tool limitations |
+| [`docs/plan.md`](docs/plan.md) | Pipeline architecture, field mappings, ID scheme, intake (Phase 1), source analysis (Phase 4), release policy (Phase 8) |
+| [`docs/release_notes.md`](docs/release_notes.md) | Ontology stats and Phase 9 verification results per release |
+| [`docs/pipeline_incidents.md`](docs/pipeline_incidents.md) | Pipeline incidents: errors, deviations, resolutions |
+| [`docs/report.md`](docs/report.md) | Known tool limitations (funowl / data2owl) |
 
 ## CI secrets
 
