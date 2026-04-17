@@ -155,9 +155,12 @@ structural checks run in the default full local pipeline before OWL derivation.
 ## Release automation (mondo-source-ingest Phase 8)
 
 **Policy:** **Manual releases only** — `.github/workflows/release.yml` is triggered with
-`workflow_dispatch` and requires a `release_tag` input. There is **no** `schedule` (cron)
-and **no** automatic release on `push` to `main`, because a cold acquire of the full
-Foundation graph is expensive and should not run on a fixed cadence without operator review.
+`workflow_dispatch` (no `release_tag` input). The Git tag is **`v` + ISO date**
+(`v$(date +%Y-%m-%d)` on the runner), consistent with other ingest repos. The YAML
+`version` field still reflects the upstream WHO `release_id` from acquire (see
+`verify.py` / `--expected-version`). There is **no** `schedule` (cron) and **no**
+automatic release on `push` to `main`, because a cold acquire of the full Foundation
+graph is expensive and should not run on a fixed cadence without operator review.
 
 **CI on every change:** `.github/workflows/build.yml` runs on pull requests and pushes to
 `main` (path-filtered) and performs acquire → extract → validate → verify → data2owl (with

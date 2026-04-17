@@ -1,21 +1,17 @@
-# Releases: workflow_dispatch only (no cron / push auto-release) — see docs/plan.md § Phase 8.
-name: Release
+# Build Foundation YAML/OWL; publish release assets. Manual run only — see docs/plan.md § Phase 8.
+name: Build and release
 
 on:
   workflow_dispatch:
-    inputs:
-      release_tag:
-        description: "Release tag (e.g. v2026-04-16)"
-        required: true
-        type: string
 
 jobs:
-  release:
+  build-and-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -68,14 +64,20 @@ jobs:
             -o icd11foundation.linkml.owl \
             icd11foundation.linkml.yaml || echo "::warning::data2owl failed — see docs/pipeline_incidents.md"
 
-      - name: Create GitHub Release
+      - name: Set release tag
+        id: version
+        run: echo "tag=v$(date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Create release and upload assets
         if: success() && hashFiles('icd11foundation.linkml.yaml') != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.release_tag }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
           files: |
             icd11foundation.linkml.yaml
             icd11foundation.linkml.owl
           generate_release_notes: true
+          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
