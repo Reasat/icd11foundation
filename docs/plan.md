@@ -58,7 +58,9 @@ scaffold items apply:
 | `linkml/mondo_source_schema.yaml`, `src/icd11foundation/datamodel.py` | Present |
 | `scripts/acquire.py`, `extract.py`, `verify.py` | Present |
 | `justfile`, `pyproject.toml`, `uv.lock`, `README.md` | Present |
-| `Makefile`, `project.Makefile`, `odk.sh`, `sparql/`, `reports/` | **N/A** (OWL-only) |
+| `sparql/count_classes_by_top_level.sparql` | Present (ROBOT QC on derived OWL) |
+| `reports/` | Present (`metrics.json`, `top-level-counts.tsv` from `just reports` / CI) |
+| `Makefile`, `project.Makefile`, `odk.sh` | **N/A** (non-OWL; no ROBOT preprocessing of raw source) |
 | `config/property-map.sssom.tsv` | **Removed** — unused for this pipeline |
 
 ## Source Type
@@ -108,9 +110,11 @@ Parent URIs from the API use `http://`; these are normalized to `https://` befor
    phantom/retired codes).
 3. **`is_root`:** Not emitted in YAML (mondo-source-ingest v0.4.0: internal-only in other
    pipelines; hierarchy is fully described by `parents`).
-4. **`data2owl`:** `linkml-owl` is attempted. If it fails on the full dataset (rdflib N3
-   parser limitation on large files), `icd11foundation.linkml.yaml` is released as the
-   sole artifact; see `docs/pipeline_incidents.md` and `docs/report.md`.
+4. **`data2owl` + `reports`:** `linkml-owl` derives OWL from YAML (with
+   `sanitize_literals_for_owl_export.py` for funowl-safe literals). **ROBOT QC** (`just
+   reports`) runs `robot measure` (extended JSON) and `sparql/count_classes_by_top_level.sparql`
+   on `icd11foundation.linkml.owl` per **mondo-source-ingest** Phase 7. CI fails if OWL or
+   reports steps fail. Residual tool limits: `docs/pipeline_incidents.md`, `docs/report.md`.
 
 ## LinkML schema (mondo-source-ingest)
 
@@ -162,9 +166,16 @@ structural checks run in the default full local pipeline before OWL derivation.
 automatic release on `push` to `main`, because a cold acquire of the full Foundation
 graph is expensive and should not run on a fixed cadence without operator review.
 
+**Release assets (mondo-source-ingest):** GitHub **Releases** upload **only**
+`icd11foundation.linkml.yaml` and `icd11foundation.linkml.owl`. ROBOT QC under `reports/`
+is produced in the release job for consistency but is **not** attached as release files;
+use `build.yml` workflow artifacts or the committed `reports/` tree for metrics.
+
 **CI on every change:** `.github/workflows/build.yml` runs on pull requests and pushes to
-`main` (path-filtered) and performs acquire → extract → validate → verify → data2owl (with
-non-fatal `data2owl`), uploading artefacts for inspection.
+`main` (path-filtered) and performs acquire → extract → validate → verify → data2owl →
+**ROBOT reports** (Java 17 + ROBOT 1.9.8 JAR), then uploads YAML, OWL, and `reports/*` as
+artefacts. **`uv sync` is followed by mondo-source-ingest `uv pip` pins** (linkml-owl 0.5.0,
+`linkml` / `linkml-runtime` from `linkml/linkml` `main`) for the comma-in-synonym workaround.
 
 To change this policy (e.g. add a monthly scheduled release), update `release.yml` and
 record the rationale here.

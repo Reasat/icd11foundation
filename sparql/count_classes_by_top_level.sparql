@@ -1,0 +1,27 @@
+# Count owl:Class descendants per ontology root (classes with no named superclass other
+# than owl:Thing). ICD-11 Foundation linkml-owl output uses rdfs:subClassOf between
+# entity classes; roots are inferred — no hard-coded chapter IRIs.
+#
+# Pattern is flattened (no nested sub-SELECT): ROBOT/OWL-API + property paths can
+# duplicate ?topLevel rows when the root filter lives in a subquery.
+#
+# See mondo-source-ingest Phase 4.9 / reports/ (non-OWL + linkml-owl).
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+
+SELECT ?topLevel (COUNT(DISTINCT ?child) AS ?count)
+WHERE {
+  ?topLevel a owl:Class .
+  FILTER (isIRI(?topLevel))
+  FILTER NOT EXISTS {
+    ?topLevel rdfs:subClassOf ?parent .
+    ?parent a owl:Class .
+    FILTER (?parent != ?topLevel)
+    FILTER (?parent != owl:Thing)
+  }
+  ?child rdfs:subClassOf* ?topLevel .
+  ?child a owl:Class .
+}
+GROUP BY ?topLevel
+ORDER BY DESC(?count)

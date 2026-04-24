@@ -8,6 +8,7 @@ on:
       - "docs/**"
       - "justfile"
       - "linkml/**"
+      - "sparql/**"
       - "scripts/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -19,6 +20,7 @@ on:
       - "docs/**"
       - "justfile"
       - "linkml/**"
+      - "sparql/**"
       - "scripts/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -41,6 +43,21 @@ jobs:
 
       - name: Install dependencies
         run: uv sync
+
+      - name: Mondo-source-ingest pins (linkml main / linkml-owl)
+        run: |
+          uv pip install linkml-owl==0.5.0 \
+            "linkml @ git+https://github.com/linkml/linkml.git@main#subdirectory=packages/linkml" \
+            "linkml-runtime @ git+https://github.com/linkml/linkml.git@main#subdirectory=packages/linkml_runtime"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install ROBOT
+        run: curl -fsSL -o /tmp/robot.jar https://github.com/ontodev/robot/releases/download/v1.9.8/robot.jar
 
       - name: Restore API node cache
         uses: actions/cache@v4
@@ -76,11 +93,20 @@ jobs:
 
       - name: Derive OWL
         run: |
+          uv run python scripts/sanitize_literals_for_owl_export.py \
+            --input icd11foundation.linkml.yaml \
+            --output tmp/icd11foundation_for_owl.json
           uv run python -m linkml_owl.dumpers.owl_dumper \
             -s linkml/mondo_source_schema.yaml \
-            -f yaml \
+            -f json \
             -o icd11foundation.linkml.owl \
-            icd11foundation.linkml.yaml || echo "::warning::data2owl failed — see docs/pipeline_incidents.md"
+            tmp/icd11foundation_for_owl.json
+
+      - name: ROBOT QC (reports/)
+        run: |
+          mkdir -p reports
+          java -Xmx8g -jar /tmp/robot.jar measure -i icd11foundation.linkml.owl -m extended -f json -o reports/metrics.json
+          java -Xmx8g -jar /tmp/robot.jar query -i icd11foundation.linkml.owl -f tsv --query sparql/count_classes_by_top_level.sparql reports/top-level-counts.tsv
 
       - name: Upload artifacts
         if: success() && hashFiles('icd11foundation.linkml.yaml') != ''
@@ -90,3 +116,5 @@ jobs:
           path: |
             icd11foundation.linkml.yaml
             icd11foundation.linkml.owl
+            reports/metrics.json
+            reports/top-level-counts.tsv

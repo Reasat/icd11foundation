@@ -37,9 +37,14 @@ That script shows the failure with **one** `funowl.Literal('"quoted leading')` a
 same path through `linkml-owl` on a one-term YAML. Full ICD-11 runs can fail for this
 and other literal edge cases once the dataset is large enough.
 
-**Resolution:** If `data2owl` fails, the released artifact is `icd11foundation.linkml.yaml`
-only. The OWL step is non-fatal in CI (`|| echo "::warning::"` fallback). Downstream
-Mondo ingest reads the YAML directly.
+**Resolution:** The pipeline runs `scripts/sanitize_literals_for_owl_export.py` to produce
+`tmp/icd11foundation_for_owl.json` (leading ASCII `"`/`'` rewritten to Unicode open quotes),
+then `owl_dumper -f json` loads that file. JSON avoids a second YAML round-trip. Sole-key synonym dicts are rewritten to
+one-element lists (e.g. ``["infection NOS"]``) so `linkml_runtime` uses the
+`Synonym(*args)` path instead of the broken `Synonym(dict)` branch in
+`_normalize_inlined`.
+Canonical release YAML is unchanged. Remaining funowl edge cases should fail CI until fixed
+upstream. Downstream Mondo ingest may read YAML directly regardless.
 
 ### 3. HTTP vs HTTPS URI normalization
 

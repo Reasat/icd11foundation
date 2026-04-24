@@ -7,6 +7,7 @@ Preprocessed ICD-11 Foundation (WHO ICD API) for Mondo source ingest — LinkML 
 1. Register at [WHO ICD API](https://icd.who.int/icdapi) for OAuth2 client credentials.
 2. Copy `env/.env.example` → `env/.env` and set `CLIENT_ID` and `CLIENT_SECRET`.
 3. Install dependencies: `uv sync`
+4. **mondo-source-ingest pins** (linkml comma workaround + linkml-owl 0.5.0): `just dependencies`
 
 ## Run
 
@@ -16,17 +17,24 @@ just extract       # tmp/icd11foundation_raw.json → icd11foundation.linkml.yam
 just validate      # linkml-validate
 just verify        # scripts/verify.py — structure, parents, raw-json cross-check
 just check         # validate + verify (recommended before release)
-just data2owl      # may fail on very large data — see docs/report.md
-just build         # acquire → extract → validate → data2owl
+just dependencies  # uv pip: linkml-owl 0.5.0 + linkml/linkml-runtime @ main (after uv sync)
+just data2owl      # funowl-safe YAML copy → linkml-owl → icd11foundation.linkml.owl
+just reports       # needs ROBOT on PATH or ROBOT_JAR → reports/metrics.json + top-level-counts.tsv
+just build         # acquire → extract → validate → verify → data2owl
+just all           # build + reports (full mondo-source-ingest-style pipeline)
 just iterate       # extract → validate (skip acquire)
 ```
+
+**ROBOT:** install from [robot.obolibrary.org](https://robot.obolibrary.org/) or set `ROBOT_JAR` to a `robot.jar` path for `just reports`.
 
 ## Outputs
 
 | File | Description |
 |------|-------------|
 | `icd11foundation.linkml.yaml` | Primary artefact for Mondo ingest |
-| `icd11foundation.linkml.owl` | linkml-owl–derived OWL (when `data2owl` succeeds) |
+| `icd11foundation.linkml.owl` | linkml-owl–derived OWL |
+| `reports/metrics.json` | ROBOT extended measure (QC) |
+| `reports/top-level-counts.tsv` | Descendant counts per inferred ontology root (`sparql/count_classes_by_top_level.sparql`) |
 
 ## Docs
 
